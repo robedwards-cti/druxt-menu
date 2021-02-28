@@ -25,9 +25,13 @@ class DruxtMenu {
       throw new Error('The \'baseUrl\' parameter is required.')
     }
 
+    if ((options.menu || {}).jsonApiMenuItems) {
+      options.menu.type = 'jsonapi_menu_items'
+    }
+
     this.options = {
       menu: {
-        jsonApiMenuItems: false
+        type: 'menu_link_content'
       },
       ...options
     }
@@ -50,11 +54,16 @@ class DruxtMenu {
    * @param {string} menuName - The menu name.
    */
   async get(menuName) {
-    if (this.options.menu.jsonApiMenuItems) {
-      return this.getJsonApiMenuItems(menuName)
-    }
+    switch (this.options.menu.type) {
+      case 'decoupled_menus':
+        return this.getDecoupledMenu(menuName)
 
-    return this.getMenuLinkContent(menuName)
+      case 'jsonapi_menu_items':
+        return this.getJsonApiMenuItems(menuName)
+
+      default:
+        return this.getMenuLinkContent(menuName)
+    }
   }
 
   /**
@@ -126,6 +135,46 @@ class DruxtMenu {
             weight: resource.attributes.weight,
           },
           resource
+        })
+      }
+    }
+
+    return { entities }
+  }
+
+  /**
+   * Gets menu items via the Drupal Decoupled Menus module.
+   *
+   * - This method is currently experimental.
+   *
+   * @example @lang js
+   * const menu = await druxtMenu.getDecoupledMenu('menu')
+   *
+   * @param {string} menuName - The menu name.
+   */
+  async getDecoupledMenu(menuName) {
+    const response = await this.druxt.axios.get(`/system/menu/${menuName}/linkset`)
+    const linkset = (response.data || {}).linkset || []
+
+    const entities = []
+    for (const links of linkset) {
+      for (const link of links.item) {
+        const hierarchy = link['drupal-menu'][0].hierarchy
+        const parent = hierarchy.slice(0, hierarchy.lastIndexOf('.')) || null
+
+        entities.push({
+          id: `${menuName}${hierarchy}`,
+          attributes: {
+            description: null,
+            link: {
+              // @todo Check for link type.
+              uri: `internal:${link.href}`,
+            },
+            menu_name: menuName,
+            parent: parent ? `${menuName}${parent}` : null,
+            title: link.title,
+            weight: hierarchy,
+          }
         })
       }
     }
