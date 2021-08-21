@@ -43,9 +43,9 @@ class DruxtMenu {
 
   /**
    * Builds the JSON:API query.
-   * 
+   *
    * @private
-   * 
+   *
    * @param {string} resource - The JSON:API resource type.
    * @param {string} menuName  - The menu name.
    * @param {string[]} requiredFields - An array of required fields for the menu resource.
@@ -82,12 +82,12 @@ class DruxtMenu {
    * @param {string} menuName - The menu name.
    * @param {object} settings - The Druxt Menu query settings object.
    */
-  async get(menuName, settings) {
+  async get(menuName, settings, prefix) {
     if (this.options.menu.jsonApiMenuItems) {
-      return this.getJsonApiMenuItems(menuName, settings)
+      return this.getJsonApiMenuItems(menuName, settings, prefix)
     }
 
-    return this.getMenuLinkContent(menuName, settings)
+    return this.getMenuLinkContent(menuName, settings, prefix)
   }
 
   /**
@@ -135,18 +135,19 @@ class DruxtMenu {
    *     requiredOnly: true,
    *   }
    * )
-   * 
+   *
    * @param {string} menuName - The menu name.
    * @param {object} settings - The Druxt Menu query settings object.
+   * @param {string} prefix - (Optional) The endpoint prefix.
    */
-  async getJsonApiMenuItems(menuName, settings) {
+  async getJsonApiMenuItems(menuName, settings, prefix = '') {
     const menuItemsResource = `menu_items--${menuName}`
     const resource = 'menu_link_content--menu_link_content'
     const requiredFields = ['menu_name', 'parent', 'title', 'url', 'weight']
 
     // Add the JSON API Menu items resource to the index.
     await this.druxt.getIndex()
-    this.druxt.index[menuItemsResource] = { href: `${this.druxt.options.endpoint}/menu_items/${menuName}` }
+    this.druxt.index[menuItemsResource] = { href: `${prefix + this.druxt.options.endpoint}/menu_items/${menuName}` }
 
     // Build query.
     const query = this.buildQuery(resource, menuName, requiredFields, settings)
@@ -166,7 +167,7 @@ class DruxtMenu {
     const collections = await this.druxt.getCollectionAll(menuItemsResource, query)
     for (const collection of collections) {
       for (const entity of collection.data) {
-        entities.push({ 
+        entities.push({
           ...entity,
           attributes: {
             ...entity.attributes,

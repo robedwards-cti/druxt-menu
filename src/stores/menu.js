@@ -66,11 +66,13 @@ const DruxtMenuStore = ({ store }) => {
        * @example @lang js
        * await this.$store.dispatch('druxtMenu/get', { name: 'main' })
        */
-      async get ({ commit }, context) {
+      async get ({ commit, rootState }, context) {
         const { name, settings } = typeof context === 'object'
           ? context
           : { name: context }
-        const { entities } = (await this.$druxtMenu.get(name, settings)) || {}
+        // Get the route prefix from the druxt-router store.
+        const prefix = rootState.druxtRouter.route.prefix
+        const { entities } = (await this.$druxtMenu.get(name, settings, prefix)) || {}
 
         commit('addEntities', entities)
       }
